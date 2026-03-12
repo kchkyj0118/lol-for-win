@@ -3,98 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>실시간 롤 승리 전략 코치</title>
+    <title>AI 실시간 전략 코치</title>
     <style>
         :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; --text: #f1f5f9; }
         body { font-family: 'Pretendard', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .dashboard { max-width: 900px; width: 100%; display: grid; gap: 20px; grid-template-columns: 1fr; }
-        .card { background: var(--card); padding: 25px; border-radius: 15px; border: 1px solid #334155; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
-        h1, h2 { color: var(--accent); margin-top: 0; }
-        .status-badge { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; margin-bottom: 10px; }
-        .status-ingame { background: #059669; color: white; }
-        .status-off { background: #475569; color: white; }
-        .strategy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        ul { padding-left: 20px; line-height: 1.6; }
-        .teams { font-size: 0.9rem; color: #94a3b8; margin-top: 10px; }
-        .footer { margin-top: 40px; font-size: 0.8rem; color: #64748b; }
-        @media (max-width: 600px) { .strategy-grid { grid-template-columns: 1fr; } }
+        .search-box { margin-bottom: 30px; display: flex; gap: 10px; background: var(--card); padding: 20px; border-radius: 12px; }
+        input { padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white; }
+        button { padding: 10px 20px; border-radius: 6px; border: none; background: var(--accent); color: #0f172a; font-weight: bold; cursor: pointer; }
+        .result-container { max-width: 800px; width: 100%; display: none; }
+        .card { background: var(--card); padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #334155; }
+        h2 { color: var(--accent); margin-top: 0; }
+        .loading { display: none; color: var(--accent); font-weight: bold; }
+        .matchup { border-bottom: 1px solid #334155; padding: 10px 0; }
+        .matchup:last-child { border: none; }
+        .line-name { font-weight: bold; color: #f1c40f; margin-right: 10px; }
     </style>
 </head>
 <body>
-    <h1>🎯 실시간 승리 전략 코치</h1>
-    <div id="dashboard" class="dashboard">
-        <div class="card">
-            <div id="status-badge" class="status-badge status-off">데이터 로딩 중...</div>
-            <p id="status-message">전략 데이터를 불러오는 중입니다.</p>
-        </div>
-        
-        <div id="strategy-content" style="display: none;">
-            <div class="card">
-                <h2>🏆 핵심 승리 플랜</h2>
-                <p id="victory-plan"></p>
-            </div>
-            
-            <div class="strategy-grid">
-                <div class="card">
-                    <h2>⚠️ 주의해야 할 스킬</h2>
-                    <ul id="watch-out"></ul>
-                </div>
-                <div class="card">
-                    <h2>🗺️ 집중 공략 라인</h2>
-                    <ul id="focus-line"></ul>
-                </div>
-            </div>
+    <h1>🎯 AI 실시간 전략 코치</h1>
+    
+    <div class="search-box">
+        <input type="text" id="name" placeholder="닉네임 (예: Hide on bush)">
+        <input type="text" id="tag" placeholder="태그 (예: KR1)">
+        <button onclick="getAnalysis()">전략 분석 시작</button>
+    </div>
 
-            <div class="card teams">
-                <p id="team-info"></p>
-                <p id="last-update"></p>
-            </div>
+    <div id="loading" class="loading">AI 분석 중... (약 10초 소요)</div>
+
+    <div id="result" class="result-container">
+        <div class="card">
+            <h2>🏆 핵심 승리 플랜</h2>
+            <p id="victory-plan"></p>
+        </div>
+
+        <div class="card">
+            <h2>🗺️ 라인별 상성 및 전략</h2>
+            <div id="lane-matchups"></div>
+        </div>
+
+        <div class="card">
+            <h2>⚠️ 주의 스킬</h2>
+            <ul id="danger-skills"></ul>
         </div>
     </div>
 
-    <div class="footer">Riot API Coaching System © 2024</div>
-
     <script>
-        async function loadStrategy() {
+        async function getAnalysis() {
+            const name = document.getElementById('name').value;
+            const tag = document.getElementById('tag').value;
+            const loading = document.getElementById('loading');
+            const resultDiv = document.getElementById('result');
+
+            if (!name || !tag) {
+                alert("닉네임과 태그를 모두 입력해주세요.");
+                return;
+            }
+
+            loading.style.display = 'block';
+            resultDiv.style.display = 'none';
+
             try {
-                // GitHub Raw URL (본인의 저장소에 맞춰 자동 수정 필요)
-                const url = "https://raw.githubusercontent.com/kchkyj0118/lol-for-win/main/strategy.json";
-                const res = await fetch(url + "?t=" + new Date().getTime());
-                const data = await res.json();
+                const response = await fetch(`/analyze?name=${encodeURIComponent(name)}&tag=${encodeURIComponent(tag)}`);
+                const data = await response.json();
 
-                const badge = document.getElementById('status-badge');
-                const content = document.getElementById('strategy-content');
-                const msg = document.getElementById('status-message');
-
-                if (data.status === "IN_GAME") {
-                    badge.innerText = "LIVE: 게임 중";
-                    badge.className = "status-badge status-ingame";
-                    msg.style.display = "none";
-                    content.style.display = "block";
-
-                    document.getElementById('victory-plan').innerText = data.victory_plan;
+                if (data.status === 'success') {
+                    const analysis = data.analysis;
+                    document.getElementById('victory-plan').innerText = analysis.victory_plan;
                     
-                    const watchList = document.getElementById('watch-out');
-                    watchList.innerHTML = data.watch_out.map(s => `<li>${s}</li>`).join('');
-                    
-                    const focusList = document.getElementById('focus-line');
-                    focusList.innerHTML = data.focus_line.map(l => `<li>${l}</li>`).join('');
+                    const matchupsDiv = document.getElementById('lane-matchups');
+                    matchupsDiv.innerHTML = analysis.lane_matchups.map(m => `
+                        <div class="matchup">
+                            <span class="line-name">[${m.line}]</span>
+                            <span>${m.strategy}</span>
+                        </div>
+                    `).join('');
 
-                    document.getElementById('team-info').innerText = `블루: ${data.blue_team.join(', ')} / 레드: ${data.red_team.join(', ')}`;
-                    document.getElementById('last-update').innerText = `최근 분석: ${data.timestamp}`;
+                    const skillsList = document.getElementById('danger-skills');
+                    skillsList.innerHTML = analysis.danger_skills.map(s => `<li>${s}</li>`).join('');
+
+                    resultDiv.style.display = 'block';
                 } else {
-                    badge.innerText = "OFFLINE";
-                    badge.className = "status-badge status-off";
-                    msg.innerText = data.message || "현재 분석 대상이 게임 중이 아닙니다.";
-                    content.style.display = "none";
+                    alert(data.message || data.error || "분석 실패");
                 }
             } catch (e) {
-                document.getElementById('status-message').innerText = "데이터 로드 실패 (전략 데이터가 아직 생성되지 않았을 수 있습니다)";
+                alert("서버 연결 실패");
+            } finally {
+                loading.style.display = 'none';
             }
         }
-
-        loadStrategy();
-        setInterval(loadStrategy, 60000);
     </script>
 </body>
 </html>
