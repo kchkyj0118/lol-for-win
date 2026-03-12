@@ -6,21 +6,24 @@
     <title>AI 실시간 롤 코치</title>
     <style>
         body { font-family: sans-serif; background: #0b0e14; color: #c9d1d9; text-align: center; padding: 40px; }
-        .box { background: #161b22; padding: 20px; border-radius: 12px; max-width: 600px; margin: auto; border: 1px solid #30363d; }
-        input { padding: 12px; width: 70%; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: white; }
-        button { padding: 12px 20px; border-radius: 6px; border: none; background: #00f2ff; color: black; font-weight: bold; cursor: pointer; }
-        .result { margin-top: 30px; text-align: left; display: none; }
+        .box { background: #161b22; padding: 30px; border-radius: 12px; max-width: 600px; margin: auto; border: 1px solid #30363d; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+        input { padding: 12px; width: 70%; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: white; margin-bottom: 10px; }
+        button { padding: 12px 24px; border-radius: 6px; border: none; background: #00f2ff; color: black; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #00c2cc; }
+        .result { margin-top: 30px; text-align: left; display: none; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .card { background: #0d1117; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #00f2ff; }
         h2 { color: #00f2ff; font-size: 1.1rem; margin: 0 0 10px 0; }
-        #loading { display: none; color: #00f2ff; margin-top: 20px; }
+        #loading { display: none; color: #00f2ff; margin-top: 20px; font-weight: bold; }
     </style>
 </head>
 <body>
     <h1>🎯 AI 실시간 롤 코치</h1>
     <div class="box">
         <input type="text" id="name" placeholder="닉네임#태그 (예: Hide on bush#KR1)">
-        <button onclick="analyze()">분석</button>
-        <div id="loading">분석 중... (약 10초 소요)</div>
+        <br>
+        <button onclick="analyze()">실시간 분석 시작</button>
+        <div id="loading">Gemini AI가 조합 분석 중... (약 10초)</div>
         <div id="result" class="result">
             <div class="card"><h2>🏆 요약</h2><p id="summary"></p></div>
             <div class="card"><h2>🔥 승리 플랜</h2><p id="plan"></p></div>
@@ -47,11 +50,13 @@
                     document.getElementById('danger').innerText = data.analysis.danger_points;
                     document.getElementById('tip').innerText = data.analysis.tip;
                     document.getElementById('result').style.display = 'block';
+                } else if (data.status === 'not_in_game') {
+                    alert(data.message);
                 } else {
-                    alert(data.message || data.error || "분석 실패");
+                    alert(data.error || "분석 중 오류가 발생했습니다.");
                 }
             } catch (e) {
-                alert("서버 연결 실패");
+                alert("서버 연결에 실패했습니다.");
             } finally {
                 document.getElementById('loading').style.display = 'none';
             }

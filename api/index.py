@@ -60,7 +60,6 @@ def analyze():
         
         for p in game_data['participants']:
             c_name = champ_map.get(p['championId'], "Unknown")
-            p_name = p.get('riotId', 'Unknown')
             if p['puuid'] == puuid:
                 my_team_id = p['teamId']
             
@@ -87,7 +86,14 @@ def analyze():
         }}
         """
         response = model.generate_content(prompt)
-        analysis = json.loads(response.text.strip().replace('```json', '').replace('```', ''))
+        # Handle cases where Gemini might return markdown markers
+        cleaned_response = response.text.strip()
+        if cleaned_response.startswith("```json"):
+            cleaned_response = cleaned_response[7:-3]
+        elif cleaned_response.startswith("```"):
+            cleaned_response = cleaned_response[3:-3]
+            
+        analysis = json.loads(cleaned_response)
 
         return jsonify({"status": "success", "analysis": analysis})
 
