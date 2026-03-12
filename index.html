@@ -3,94 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 실시간 전략 코치</title>
+    <title>AI LoL 전략 코치</title>
     <style>
         :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; --text: #f1f5f9; }
-        body { font-family: 'Pretendard', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .search-box { margin-bottom: 30px; display: flex; gap: 10px; background: var(--card); padding: 20px; border-radius: 12px; }
-        input { padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white; }
-        button { padding: 10px 20px; border-radius: 6px; border: none; background: var(--accent); color: #0f172a; font-weight: bold; cursor: pointer; }
-        .result-container { max-width: 800px; width: 100%; display: none; }
-        .card { background: var(--card); padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #334155; }
-        h2 { color: var(--accent); margin-top: 0; }
-        .loading { display: none; color: var(--accent); font-weight: bold; }
-        .matchup { border-bottom: 1px solid #334155; padding: 10px 0; }
-        .matchup:last-child { border: none; }
-        .line-name { font-weight: bold; color: #f1c40f; margin-right: 10px; }
+        body { font-family: sans-serif; background: var(--bg); color: var(--text); padding: 40px 20px; display: flex; flex-direction: column; align-items: center; }
+        .card { background: var(--card); padding: 25px; border-radius: 12px; width: 100%; max-width: 600px; margin-bottom: 20px; border: 1px solid #334155; }
+        h1 { color: var(--accent); margin-bottom: 40px; }
+        h2 { color: var(--accent); font-size: 1.2rem; margin-top: 0; }
+        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; margin-bottom: 10px; }
+        .status-live { background: #059669; color: white; }
+        .status-off { background: #475569; color: white; }
+        .tip { background: rgba(56, 189, 248, 0.1); border-left: 4px solid var(--accent); padding: 15px; margin-top: 10px; font-style: italic; }
+        .footer { font-size: 0.8rem; color: #64748b; margin-top: 40px; }
     </style>
 </head>
 <body>
     <h1>🎯 AI 실시간 전략 코치</h1>
     
-    <div class="search-box">
-        <input type="text" id="name" placeholder="닉네임 (예: Hide on bush)">
-        <input type="text" id="tag" placeholder="태그 (예: KR1)">
-        <button onclick="getAnalysis()">전략 분석 시작</button>
+    <div id="status-card" class="card">
+        <div id="badge" class="status-badge">상태 확인 중...</div>
+        <p id="message">데이터를 불러오고 있습니다.</p>
     </div>
 
-    <div id="loading" class="loading">AI 분석 중... (약 10초 소요)</div>
-
-    <div id="result" class="result-container">
+    <div id="content" style="display: none;">
         <div class="card">
-            <h2>🏆 핵심 승리 플랜</h2>
+            <h2>🏆 승리 요약</h2>
+            <p id="summary"></p>
+        </div>
+        <div class="card">
+            <h2>🔥 핵심 전략</h2>
             <p id="victory-plan"></p>
         </div>
-
         <div class="card">
-            <h2>🗺️ 라인별 상성 및 전략</h2>
-            <div id="lane-matchups"></div>
+            <h2>⚠️ 주의사항</h2>
+            <p id="danger"></p>
         </div>
+        <div id="tip-card" class="card tip">
+            <p id="tip"></p>
+        </div>
+    </div>
 
-        <div class="card">
-            <h2>⚠️ 주의 스킬</h2>
-            <ul id="danger-skills"></ul>
-        </div>
+    <div class="footer">
+        최근 분석 시간: <span id="timestamp">-</span> (5분마다 자동 갱신)
     </div>
 
     <script>
-        async function getAnalysis() {
-            const name = document.getElementById('name').value;
-            const tag = document.getElementById('tag').value;
-            const loading = document.getElementById('loading');
-            const resultDiv = document.getElementById('result');
-
-            if (!name || !tag) {
-                alert("닉네임과 태그를 모두 입력해주세요.");
-                return;
-            }
-
-            loading.style.display = 'block';
-            resultDiv.style.display = 'none';
-
+        async function loadStrategy() {
             try {
-                const response = await fetch(`/analyze?name=${encodeURIComponent(name)}&tag=${encodeURIComponent(tag)}`);
-                const data = await response.json();
+                // Fetch the strategy.json file from the same directory
+                const res = await fetch('strategy.json?t=' + new Date().getTime());
+                if (!res.ok) throw new Error("JSON not found");
+                const data = await res.json();
 
-                if (data.status === 'success') {
-                    const analysis = data.analysis;
-                    document.getElementById('victory-plan').innerText = analysis.victory_plan;
-                    
-                    const matchupsDiv = document.getElementById('lane-matchups');
-                    matchupsDiv.innerHTML = analysis.lane_matchups.map(m => `
-                        <div class="matchup">
-                            <span class="line-name">[${m.line}]</span>
-                            <span>${m.strategy}</span>
-                        </div>
-                    `).join('');
+                const badge = document.getElementById('badge');
+                const message = document.getElementById('message');
+                const content = document.getElementById('content');
+                const timestamp = document.getElementById('timestamp');
 
-                    const skillsList = document.getElementById('danger-skills');
-                    skillsList.innerHTML = analysis.danger_skills.map(s => `<li>${s}</li>`).join('');
+                timestamp.innerText = data.timestamp || "-";
 
-                    resultDiv.style.display = 'block';
+                if (data.status === "success") {
+                    badge.innerText = "LIVE: 게임 중";
+                    badge.className = "status-badge status-live";
+                    message.innerText = `현재 [${data.game_mode}] 모드 분석 중입니다.`;
+                    content.style.display = "block";
+
+                    document.getElementById('summary').innerText = data.analysis.summary;
+                    document.getElementById('victory-plan').innerText = data.analysis.victory_plan;
+                    document.getElementById('danger').innerText = data.analysis.danger_skills;
+                    document.getElementById('tip').innerText = data.analysis.one_line_tip;
                 } else {
-                    alert(data.message || data.error || "분석 실패");
+                    badge.innerText = "OFFLINE";
+                    badge.className = "status-badge status-off";
+                    message.innerText = data.message || "현재 분석 대상이 게임 중이 아닙니다.";
+                    content.style.display = "none";
                 }
             } catch (e) {
-                alert("서버 연결 실패");
-            } finally {
-                loading.style.display = 'none';
+                document.getElementById('message').innerText = "전략 데이터를 아직 생성 중이거나 찾을 수 없습니다.";
             }
         }
+
+        loadStrategy();
+        setInterval(loadStrategy, 60000); // Check for UI updates every 1 min
     </script>
 </body>
 </html>

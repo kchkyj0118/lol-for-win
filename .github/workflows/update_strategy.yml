@@ -1,0 +1,40 @@
+name: Update Strategy AI
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"  # 5분마다 실행
+  workflow_dispatch:      # 수동 실행 가능
+  push:
+    branches: [ main ]    # 코드 변경 시에도 실행
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: pip install requests google-generativeai
+
+      - name: Run Analysis
+        env:
+          RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          RIOT_NAME: "내닉네임"  # GitHub Secrets에 등록하거나 여기서 직접 수정
+          RIOT_TAG: "KR1"      # GitHub Secrets에 등록하거나 여기서 직접 수정
+        run: python main.py
+
+      - name: Commit and Push
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add strategy.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update AI strategy data" && git push)
