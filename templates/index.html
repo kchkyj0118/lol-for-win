@@ -3,107 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI LoL Coach - 실시간 승리 전략</title>
-    <link href="https://cdn.jsdelivr.net/gh/sun-peak/pretendard@latest/dist/web/static/pretendard.css" rel="stylesheet">
+    <title>AI 실시간 롤 코치</title>
     <style>
-        :root { --bg: #0b0e14; --card: #161b22; --accent: #00f2ff; --text: #c9d1d9; }
-        body { font-family: 'Pretendard', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 40px 20px; display: flex; flex-direction: column; align-items: center; }
-        .hero { text-align: center; margin-bottom: 40px; }
-        .hero h1 { font-size: 2.5rem; color: #fff; margin-bottom: 10px; }
-        .hero p { color: #8b949e; }
-        
-        .search-box { background: var(--card); padding: 20px; border-radius: 12px; display: flex; gap: 10px; width: 100%; max-width: 500px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); border: 1px solid #30363d; }
-        input { flex: 1; padding: 12px 16px; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: #fff; outline: none; transition: 0.2s; }
-        input:focus { border-color: var(--accent); }
-        button { padding: 12px 24px; border-radius: 6px; border: none; background: var(--accent); color: #000; font-weight: 800; cursor: pointer; transition: 0.2s; }
-        button:hover { transform: translateY(-2px); box-shadow: 0 0 20px rgba(0, 242, 255, 0.4); }
-
-        .result-container { width: 100%; max-width: 700px; margin-top: 40px; display: none; }
-        .card { background: var(--card); padding: 30px; border-radius: 16px; border: 1px solid #30363d; margin-bottom: 24px; animation: slideUp 0.5s ease-out; }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        
-        h2 { font-size: 1.2rem; color: var(--accent); margin-top: 0; display: flex; align-items: center; gap: 10px; }
-        .tip-box { background: rgba(0, 242, 255, 0.1); border-left: 4px solid var(--accent); padding: 15px; border-radius: 4px; font-weight: 600; color: #fff; }
-        .loading { display: none; margin-top: 20px; font-weight: bold; color: var(--accent); }
-        
-        .error { color: #ff7b72; background: rgba(255, 123, 114, 0.1); padding: 15px; border-radius: 8px; margin-top: 20px; display: none; }
+        body { font-family: sans-serif; background: #0b0e14; color: #c9d1d9; text-align: center; padding: 40px; }
+        .box { background: #161b22; padding: 20px; border-radius: 12px; max-width: 600px; margin: auto; border: 1px solid #30363d; }
+        input { padding: 12px; width: 70%; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: white; }
+        button { padding: 12px 20px; border-radius: 6px; border: none; background: #00f2ff; color: black; font-weight: bold; cursor: pointer; }
+        .result { margin-top: 30px; text-align: left; display: none; }
+        .card { background: #0d1117; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #00f2ff; }
+        h2 { color: #00f2ff; font-size: 1.1rem; margin: 0 0 10px 0; }
+        #loading { display: none; color: #00f2ff; margin-top: 20px; }
     </style>
 </head>
 <body>
-    <div class="hero">
-        <h1>AI LoL Coach</h1>
-        <p>실시간 인게임 조합을 분석하여 승리 플랜을 제시합니다.</p>
-    </div>
-
-    <div class="search-box">
-        <input type="text" id="summonerInput" placeholder="닉네임#태그 입력 (예: Hide on bush#KR1)" onkeypress="if(event.keyCode==13) startAnalysis()">
-        <button onclick="startAnalysis()">분석</button>
-    </div>
-
-    <div id="loading" class="loading">인게임 데이터 분석 중... (최대 15초)</div>
-    <div id="errorBox" class="error"></div>
-
-    <div id="result" class="result-container">
-        <div class="card">
-            <h2>🏆 전체 요약</h2>
-            <p id="summary"></p>
-        </div>
-
-        <div class="card">
-            <h2>🔥 핵심 승리 전략</h2>
-            <p id="victoryPlan"></p>
-        </div>
-
-        <div class="card">
-            <h2>⚠️ 주의 포인트</h2>
-            <p id="dangerPoints"></p>
-        </div>
-
-        <div class="card tip-box">
-            <span>💡 </span><span id="coachingTip"></span>
+    <h1>🎯 AI 실시간 롤 코치</h1>
+    <div class="box">
+        <input type="text" id="name" placeholder="닉네임#태그 (예: Hide on bush#KR1)">
+        <button onclick="analyze()">분석</button>
+        <div id="loading">분석 중... (약 10초 소요)</div>
+        <div id="result" class="result">
+            <div class="card"><h2>🏆 요약</h2><p id="summary"></p></div>
+            <div class="card"><h2>🔥 승리 플랜</h2><p id="plan"></p></div>
+            <div class="card"><h2>⚠️ 주의사항</h2><p id="danger"></p></div>
+            <div class="card"><h2>💡 꿀팁</h2><p id="tip"></p></div>
         </div>
     </div>
 
     <script>
-        async function startAnalysis() {
-            const input = document.getElementById('summonerInput').value;
-            const loading = document.getElementById('loading');
-            const result = document.getElementById('result');
-            const errorBox = document.getElementById('errorBox');
-
-            if (!input.includes('#')) {
-                alert('닉네임#태그 형식으로 입력해주세요!');
-                return;
-            }
-
-            loading.style.display = 'block';
-            result.style.display = 'none';
-            errorBox.style.display = 'none';
+        async function analyze() {
+            const name = document.getElementById('name').value;
+            if (!name.includes('#')) return alert('닉네임#태그 형식으로 입력해주세요.');
+            
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
 
             try {
-                const response = await fetch(`/analyze?name=${encodeURIComponent(input)}`);
-                const data = await response.json();
-
+                const res = await fetch(`/api/analyze?name=${encodeURIComponent(name)}`);
+                const data = await res.json();
+                
                 if (data.status === 'success') {
-                    const ana = data.analysis;
-                    document.getElementById('summary').innerText = ana.summary;
-                    document.getElementById('victoryPlan').innerText = ana.victory_plan;
-                    document.getElementById('dangerPoints').innerText = ana.danger_points;
-                    document.getElementById('coachingTip').innerText = ana.coaching_tip;
-                    
-                    result.style.display = 'block';
-                } else if (data.status === 'not_in_game') {
-                    errorBox.innerText = data.message;
-                    errorBox.style.display = 'block';
+                    document.getElementById('summary').innerText = data.analysis.summary;
+                    document.getElementById('plan').innerText = data.analysis.victory_plan;
+                    document.getElementById('danger').innerText = data.analysis.danger_points;
+                    document.getElementById('tip').innerText = data.analysis.tip;
+                    document.getElementById('result').style.display = 'block';
                 } else {
-                    errorBox.innerText = data.error || "알 수 없는 오류가 발생했습니다.";
-                    errorBox.style.display = 'block';
+                    alert(data.message || data.error || "분석 실패");
                 }
             } catch (e) {
-                errorBox.innerText = "서버와 통신 중 오류가 발생했습니다.";
-                errorBox.style.display = 'block';
+                alert("서버 연결 실패");
             } finally {
-                loading.style.display = 'none';
+                document.getElementById('loading').style.display = 'none';
             }
         }
     </script>
